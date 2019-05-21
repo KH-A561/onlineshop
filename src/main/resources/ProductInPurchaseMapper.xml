@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+
+<mapper namespace="net.thumbtack.school.onlineshop.mybatis.mapper.ProductInBasketMapper">
+    <resultMap id="resultPurchase" type="net.thumbtack.school.onlineshop.model.Purchase">
+        <id property="id" column="`product_in_purchase`.id"/>
+        <result property="name" column="`product_in_purchase`.name"/>
+        <result property="price" column="`product_in_purchase`.price"/>
+        <result property="count" column="`product_in_purchase`.count"/>
+        <association property="client" column="`account`.id" javaType="Client">
+            <id property="id" column="`account`.id"/>
+            <result property="firstName" column="`account`.firstName"/>
+            <result property="lastName" column="`account`.lastName"/>
+            <result property="patronymic" column="`account`.patronymic"/>
+            <result property="login" column="`account`.login"/>
+            <result property="address" column="`client`.address"/>
+            <result property="email" column="`client`.email"/>
+            <result property="phone" column="`client`.phone"/>
+        </association>
+        <association property="product" column="`product_in_purchase`.product_id" javaType="Product">
+            <id property="id" column="`product_in_purchase`.product_id"/>
+            <result property="name" column="`product_in_purchase`.name"/>
+            <result property="price" column="`product_in_purchase`.price"/>
+            <result property="count" column="``product_in_purchase`.count"/>
+            <collection property="categories" column="`category`.id" javaType="java.util.List"
+                        ofType="net.thumbtack.school.onlineshop.model.Category">
+                <id property="id" column="`category`.id"/>
+                <result property="name" column="`category`.name"/>
+                <association property="parentCategory" column="`category`.parent_id"
+                             select="net.thumbtack.school.onlineshop.mybatis.mapper.CategoryMapper.getAnyCategoryById">
+                    <id property="id" column="id"/>
+                    <result property="name" column="name"/>
+                </association>
+            </collection>
+        </association>
+    </resultMap>
+
+    <select id="getAllParametrized" resultMap="resultPurchase">
+        SELECT `product_in_purchase`.id,
+        `account`.id, `account`.login,
+        `account`.firstName, `account`.lastName, `account`.patronymic,
+        `client`.address, `client`.email, `client`.phone,
+        `product_in_purchase`.product_id, `category`.id, `category`.name, `category`.parent_id,
+        `product_in_purchase`.name,
+        `product_in_purchase`.price,
+        `product_in_purchase`.count
+        FROM `product_in_purchase`
+        INNER JOIN `client` ON `client`.account_id = `product_in_purchase`.client_account_id
+        <if test="#{clients} != null">
+            IN
+            <foreach item='client' collection='clients' separator=',' open='(' close=')'>
+                "#{client.id}",
+            </foreach>
+        </if>
+        INNER JOIN `account` ON `account`.id = `client`.account_id
+        INNER JOIN `product` ON `product`.id = `product_in_purchase`.product_id
+        <if test="#{products} != null">
+            IN
+            <foreach item='product' collection='products' separator=',' open='(' close=')'>
+                "#{product.id}",
+            </foreach>
+        </if>
+        INNER JOIN `product_category` ON `product_category`.product_id = `product`.id
+        INNER JOIN `category` ON `category`.id = `product_category`.category_id
+        <if test="#{categories} != null">
+            IN
+            <foreach item='category' collection='categories' separator=',' open='(' close=')'>
+                "#{category.id}",
+            </foreach>
+        </if>
+        <if test="#{order} = 'product'">
+            ORDER BY `product_in_purchase`.name
+        </if>
+        <if test="#{order} = 'category'">
+            ORDER BY `category`.name
+        </if>
+        <if test="#{order} = 'client'">
+            ORDER BY `account`.login
+        </if>
+        <if test="#{offset} != null AND #{limit} != null">
+            LIMIT #{offset}, #{limit}
+        </if>
+    </select>
+</mapper>
